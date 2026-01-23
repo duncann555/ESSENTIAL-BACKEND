@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { crearPreferencia } from "../controllers/pagos.controllers.js";
-import verificarToken from "../middlewares/verificarToken.js";
+import verificarJWT from "../middlewares/verificarJWT.js";
 
 const router = Router();
 
-// Usamos el middleware que ya tenés para asegurar que solo usuarios logueados paguen
-router.post("/checkout", verificarToken, crearPreferencia);
+// Crear preferencia de MercadoPago
+router.post("/checkout", verificarJWT, crearPreferencia);
 
 export default router;

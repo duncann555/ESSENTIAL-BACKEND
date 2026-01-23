@@ -2,47 +2,92 @@ import mongoose, { Schema } from "mongoose";
 
 const pedidoSchema = new Schema(
   {
-    usuario: { type: Schema.Types.ObjectId, ref: "usuario", required: true },
-    productos: [
-      {
-        productoId: { type: Schema.Types.ObjectId, ref: "producto" },
-        nombre: String,
-        precio: Number,
-        cantidad: Number,
-      }
-    ],
-    total: { type: Number, required: true },
-    
-    // DATOS DE ENVÍO - Conectado con Andreani
-    envio: {
-      metodo: { type: String, default: "Andreani" },
-      provincia: { type: String, required: true },
-      ciudad: { type: String, required: true },
-      domicilio: { type: String, required: true },
-      codigoPostal: { type: String, required: true },
-      trackingId: { type: String }, // Aquí guardarás el número de Andreani
-      costoEnvio: { type: Number, default: 0 }
+    usuario: {
+      type: Schema.Types.ObjectId,
+      ref: "usuario",
+      required: true,
     },
 
-    // DATOS DE PAGO - Conectado con MercadoPago
-    pago: {
-      transactionId: { type: String }, // El payment_id que te da MP
-      status: { 
-        type: String, 
-        enum: ["pending", "approved", "rejected", "in_process"], 
-        default: "pending" 
+    productos: [
+      {
+        producto: {
+          type: Schema.Types.ObjectId,
+          ref: "producto",
+          required: true,
+        },
+        nombre: String,
+        precio: Number,
+        cantidad: {
+          type: Number,
+          min: 1,
+          required: true,
+        },
       },
-      metodo: { type: String, default: "Tarjeta" }
+    ],
+
+    total: {
+      type: Number,
+      required: true,
     },
-    
+
+    // ===============================
+    // PAGO - MERCADO PAGO
+    // ===============================
+    pago: {
+      proveedor: {
+        type: String,
+        default: "MercadoPago",
+      },
+      preferenceId: String,   // ID de la preferencia
+      paymentId: String,      // ID real del pago
+      estado: {
+        type: String,
+        enum: ["pending", "approved", "rejected"],
+        default: "pending",
+      },
+      fechaPago: Date,
+    },
+
+    // ===============================
+    // ENVÍO - ANDREANI
+    // ===============================
+    envio: {
+      proveedor: {
+        type: String,
+        default: "Andreani",
+      },
+      provincia: String,
+      ciudad: String,
+      domicilio: String,
+      codigoPostal: String,
+      trackingId: String,
+      estado: {
+        type: String,
+        enum: ["Pendiente", "Despachado", "Entregado"],
+        default: "Pendiente",
+      },
+      costo: {
+        type: Number,
+        default: 0,
+      },
+    },
+
+    // ===============================
+    // ESTADO GENERAL DEL PEDIDO
+    // ===============================
     estadoPedido: {
       type: String,
-      enum: ["En espera de pago", "Preparando envío", "Despachado", "Entregado", "Cancelado"],
+      enum: [
+        "En espera de pago",
+        "Preparando envío",
+        "Despachado",
+        "Entregado",
+        "Cancelado",
+      ],
       default: "En espera de pago",
-    }
+    },
   },
   { timestamps: true }
 );
 
-const Pedido = mongoose.model("pedido", pedidoSchema);
-export default Pedido;
+export default mongoose.model("pedido", pedidoSchema);

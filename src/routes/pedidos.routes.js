@@ -5,42 +5,51 @@ import {
   obtenerPedidoID,
   actualizarEstadoPedido,
   eliminarPedido,
-  listarPedidosUsuario // Nueva función necesaria para el cliente
+  listarPedidosUsuario,
 } from "../controllers/pedidos.controllers.js";
 
-// Middlewares de validación y seguridad
+import verificarJWT from "../middlewares/verificarJWT.js";
+import { EsAdmin } from "../middlewares/verificarRoles.js";
 import validacionPedido from "../middlewares/validacionPedido.js";
 import validacionCambioEstado from "../middlewares/validacionCambioEstado.js";
-import verificarJWT from "../middlewares/verificarToken.js";
-import { EsAdmin } from "../middlewares/verificarRoles.js";
+import validacionID from "../middlewares/validacionID.js";
 
 const router = Router();
 
-// ==========================================
-// RUTAS DE ACCESO GENERAL (Logueados)
-// ==========================================
+/* ==========================================
+   RUTAS PARA USUARIOS LOGUEADOS
+========================================== */
 
-router.route("/")
-  // El usuario crea su pedido (antes de ir a Mercado Pago)
-  .post([verificarJWT, validacionPedido], crearPedido)
-  
-  // El Admin ve todos, el Usuario solo los suyos (Lógica interna del controller)
-  .get([verificarJWT], listarPedidos);
+// Crear pedido
+router.post("/", verificarJWT, validacionPedido, crearPedido);
 
-// Nueva ruta: Para que el cliente vea su historial de compras en su perfil
+// Listar pedidos (admin ve todos / usuario solo los suyos)
+router.get("/", verificarJWT, listarPedidos);
+
+// Historial del usuario logueado
 router.get("/mis-pedidos", verificarJWT, listarPedidosUsuario);
 
-// ==========================================
-// RUTAS DE ADMINISTRACIÓN (Solo Admin)
-// ==========================================
+/* ==========================================
+   RUTAS SOLO PARA ADMIN
+========================================== */
 
-router.route("/:id")
-  .get([verificarJWT, EsAdmin], obtenerPedidoID)
-  
-  // PATCH: Ideal para cambiar estados (Pendiente -> Pagado -> Despachado)
-  .patch([verificarJWT, EsAdmin, validacionCambioEstado], actualizarEstadoPedido)
-  
-  // DELETE: Solo si el pedido fue cancelado o por error administrativo
-  .delete([verificarJWT, EsAdmin], eliminarPedido);
+router.get("/:id", verificarJWT, EsAdmin, validacionID, obtenerPedidoID);
+
+router.patch(
+  "/:id",
+  verificarJWT,
+  EsAdmin,
+  validacionID,
+  validacionCambioEstado,
+  actualizarEstadoPedido
+);
+
+router.delete(
+  "/:id",
+  verificarJWT,
+  EsAdmin,
+  validacionID,
+  eliminarPedido
+);
 
 export default router;

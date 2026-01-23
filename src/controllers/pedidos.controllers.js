@@ -1,50 +1,59 @@
 import Pedido from "../models/pedido.js";
 import Producto from "../models/producto.js";
 
-// ==========================================
-// 1. CREAR PEDIDO (POST)
-// ==========================================
+/* ======================================================
+   1️⃣ CREAR PEDIDO
+====================================================== */
+
 export const crearPedido = async (req, res) => {
   try {
-    const { productos, envio, pago, total } = req.body;
-    const usuarioId = req.usuarioId; // Extraído de tu middleware verificarToken
+    const { productos, envio } = req.body;
+    const usuarioId = req.usuarioId;
 
-    // Validaciones básicas
     if (!productos || productos.length === 0) {
-      return res.status(400).json({ mensaje: "No hay productos en el pedido" });
-    }
-    if (!envio) {
-      return res.status(400).json({ mensaje: "Faltan los datos de envío para Andreani" });
+      return res.status(400).json({ mensaje: "Pedido vacío" });
     }
 
-    // Opcional: Validar stock y recalcular total en el servidor por seguridad
-    let totalCalculado = 0;
+    let total = 0;
+    const productosFinal = [];
+
     for (const item of productos) {
-      const prodBD = await Producto.findById(item.productoId);
-      if (!prodBD) {
-        return res.status(404).json({ mensaje: `Producto ${item.nombre} no encontrado` });
+      const productoBD = await Producto.findById(item.producto);
+
+      if (!productoBD) {
+        return res.status(404).json({ mensaje: "Producto no existe" });
       }
-      // Verificamos stock disponible
-      if (prodBD.stock < item.cantidad) {
-        return res.status(400).json({ mensaje: `Stock insuficiente para ${prodBD.nombre}` });
+
+      if (productoBD.stock < item.cantidad) {
+        return res.status(400).json({
+          mensaje: `Stock insuficiente para ${productoBD.nombre}`,
+        });
       }
-      totalCalculado += prodBD.precio * item.cantidad;
+
+      total += productoBD.precio * item.cantidad;
+
+      productosFinal.push({
+        producto: productoBD._id,
+        nombre: productoBD.nombre,
+        precio: productoBD.precio,
+        cantidad: item.cantidad,
+      });
     }
 
-    const nuevoPedido = new Pedido({
+    const pedido = new Pedido({
       usuario: usuarioId,
-      productos,
-      total: total || totalCalculado, // Priorizamos el total calculado en el server
+      productos: productosFinal,
+      total,
       envio,
-      pago: pago || { status: "pending" },
-      estadoPedido: "En espera de pago"
+      pago: { estado: "pending" },
+      estadoPedido: "En espera de pago",
     });
 
-    await nuevoPedido.save();
+    await pedido.save();
 
     res.status(201).json({
       mensaje: "Pedido creado correctamente",
-      pedidoId: nuevoPedido._id,
+      pedidoId: pedido._id,
     });
   } catch (error) {
     console.error(error);
@@ -52,16 +61,17 @@ export const crearPedido = async (req, res) => {
   }
 };
 
-// ==========================================
-// 2. LISTAR PEDIDOS (GET)
-// ==========================================
+/* ======================================================
+   2️⃣ LISTAR PEDIDOS
+====================================================== */
+
 export const listarPedidos = async (req, res) => {
   try {
-    // Si es Admin ve todos, si es Usuario solo los suyos
-    const filtro = req.rol === "Administrador" ? {} : { usuario: req.usuarioId };
+    const filtro =
+      req.rol === "Administrador" ? {} : { usuario: req.usuarioId };
 
     const pedidos = await Pedido.find(filtro)
-      .populate("usuario", "nombre apellido email") // Trae datos del cliente sin traer el password
+      .populate("usuario", "nombre apellido email")
       .sort({ createdAt: -1 });
 
     res.status(200).json(pedidos);
@@ -71,9 +81,10 @@ export const listarPedidos = async (req, res) => {
   }
 };
 
-// ==========================================
-// 3. OBTENER POR ID (GET)
-// ==========================================
+/* ======================================================
+   3️⃣ OBTENER PEDIDO POR ID
+====================================================== */
+
 export const obtenerPedidoID = async (req, res) => {
   try {
     const pedido = await Pedido.findById(req.params.id)
@@ -86,47 +97,48 @@ export const obtenerPedidoID = async (req, res) => {
     res.status(200).json(pedido);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ mensaje: "Error al obtener el pedido" });
+    res.status(500).json({ mensaje: "Error al obtener pedido" });
   }
 };
 
-// ==========================================
-// 4. ACTUALIZAR ESTADO (PATCH)
-// ==========================================
+/* ======================================================
+   4️⃣ ACTUALIZAR ESTADO DEL PEDIDO (ADMIN)
+====================================================== */
+
 export const actualizarEstadoPedido = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { estadoPedido, trackingId, pagoStatus } = req.body;
+    const { estadoPedido, trackingId } = req.body;
 
-    // Buscamos y actualizamos campos específicos
-    const updateFields = {};
-    if (estadoPedido) updateFields.estadoPedido = estadoPedido;
-    if (trackingId) updateFields["envio.trackingId"] = trackingId;
-    if (pagoStatus) updateFields["pago.status"] = pagoStatus;
-
-    const pedidoActualizado = await Pedido.findByIdAndUpdate(
-      id,
-      { $set: updateFields },
-      { new: true }
-    );
-
-    if (!pedidoActualizado) {
+    const pedido = await Pedido.findById(req.params.id);
+    if (!pedido) {
       return res.status(404).json({ mensaje: "Pedido no encontrado" });
     }
 
+    if (estadoPedido) {
+      pedido.estadoPedido = estadoPedido;
+    }
+
+    if (trackingId) {
+      pedido.envio.trackingId = trackingId;
+      pedido.envio.estado = "Despachado";
+    }
+
+    await pedido.save();
+
     res.status(200).json({
-      mensaje: "Pedido actualizado con éxito",
-      pedido: pedidoActualizado,
+      mensaje: "Pedido actualizado correctamente",
+      pedido,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ mensaje: "Error al actualizar el pedido" });
+    res.status(500).json({ mensaje: "Error al actualizar pedido" });
   }
 };
 
-// ==========================================
-// 5. ELIMINAR PEDIDO (DELETE)
-// ==========================================
+/* ======================================================
+   5️⃣ ELIMINAR PEDIDO
+====================================================== */
+
 export const eliminarPedido = async (req, res) => {
   try {
     const pedido = await Pedido.findByIdAndDelete(req.params.id);
@@ -138,20 +150,25 @@ export const eliminarPedido = async (req, res) => {
     res.status(200).json({ mensaje: "Pedido eliminado correctamente" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ mensaje: "Error al eliminar el pedido" });
+    res.status(500).json({ mensaje: "Error al eliminar pedido" });
   }
 };
 
-// Agregá esto en pedidos.controllers.js
+/* ======================================================
+   6️⃣ LISTAR PEDIDOS DEL USUARIO LOGUEADO
+====================================================== */
+
 export const listarPedidosUsuario = async (req, res) => {
   try {
-    // req.usuarioId viene del middleware verificarToken
-    const pedidos = await Pedido.find({ usuario: req.usuarioId })
-      .sort({ createdAt: -1 });
+    const pedidos = await Pedido.find({ usuario: req.usuarioId }).sort({
+      createdAt: -1,
+    });
 
     res.status(200).json(pedidos);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ mensaje: "Error al obtener tu historial de pedidos" });
+    res
+      .status(500)
+      .json({ mensaje: "Error al obtener historial de pedidos" });
   }
 };

@@ -1,7 +1,7 @@
 import Usuario from "../models/usuario.js";
 import bcrypt from "bcrypt";
 
-export const inicioAdmin = async (req, res) => {
+export const inicioAdmin = async () => {
   try {
     const { ADMIN_EMAIL, ADMIN_PASSWORD } = process.env;
 
@@ -19,10 +19,8 @@ export const inicioAdmin = async (req, res) => {
     const passwordEncriptado = bcrypt.hashSync(ADMIN_PASSWORD, saltos);
 
     const nuevoAdmin = new Usuario({
-      nombre: "juan",
-      apellido: "perez",
-      dni: 12345678,
-      telefono: 123456789,
+      nombre: "Administrador",
+      apellido: "Administrador",
       email: ADMIN_EMAIL,
       password: passwordEncriptado, //guardamos la contraseña encriptada
       rol: "Administrador",
