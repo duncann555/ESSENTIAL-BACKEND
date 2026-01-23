@@ -1,19 +1,31 @@
 import cloudinary from "./cloudinary.js";
 
-const subirImagenCloudinary = (buffer) => {
+const cloudinaryUploader = (file) => {
   return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder: "viciAR" },
+    // Si no llega archivo, devolvemos null
+    if (!file) {
+        resolve(null);
+        return;
+    }
+
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: "essenzia_productos", // Nombre de la carpeta en Cloudinary
+        resource_type: "auto",
+      },
       (error, result) => {
-        if (result) {
-          resolve(result);
-        } else {
+        if (error) {
+          console.error("❌ Error interno de Cloudinary:", error);
           reject(error);
+        } else {
+          resolve(result);
         }
       }
     );
-    stream.end(buffer);
+
+    // ACA ESTÁ LA CLAVE: El helper extrae el buffer del archivo
+    uploadStream.end(file.buffer);
   });
 };
 
-export default subirImagenCloudinary;
+export default cloudinaryUploader;

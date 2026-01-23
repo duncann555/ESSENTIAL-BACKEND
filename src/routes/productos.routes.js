@@ -10,10 +10,13 @@ import {
 } from "../controllers/productos.controllers.js";
 
 import verificarJWT from "../middlewares/verificarJWT.js";
-import { EsAdmin } from "../middlewares/verificarRoles.js";
+import { EsAdmin } from "../middlewares/verificarRoles.js"; 
 import upload from "../helpers/upload.js";
 import errorMulter from "../middlewares/ErrorMulter.js";
-import validacionProducto from "../middlewares/validacionProducto.js";
+
+// CORRECCIÓN 1: Agregamos llaves { } porque ahora es un export const
+import { validacionProducto } from "../middlewares/validacionProducto.js";
+
 import validacionEstadoProducto from "../middlewares/validacionEstadoProducto.js";
 import validacionID from "../middlewares/validacionID.js";
 
@@ -29,7 +32,7 @@ router.post(
   "/",
   verificarJWT,
   EsAdmin,
-  upload.single("imagenUrl"),
+  upload.single("imagen"), // CORRECCIÓN 2: Debe coincidir con el frontend ("imagen")
   errorMulter,
   validacionProducto,
   crearProducto
@@ -40,7 +43,7 @@ router.put(
   verificarJWT,
   EsAdmin,
   validacionID,
-  upload.single("imagenUrl"),
+  upload.single("imagen"), // CORRECCIÓN 2: Aquí también
   errorMulter,
   validacionProducto,
   editarProducto

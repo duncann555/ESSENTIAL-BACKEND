@@ -8,7 +8,7 @@ const verificarJWT = (req, res, next) => {
       return res.status(401).json({ mensaje: "No hay token en la petición" });
     }
 
-    const payload = jwt.verify(token, process.env.SECRET_JWT);
+    const payload = jwt.verify(token, process.env.SECRETJWT);
 
     // Guardamos los datos decodificados en la request para usarlos después
     req.usuarioId = payload.uid; // ID para buscar en base de datos
