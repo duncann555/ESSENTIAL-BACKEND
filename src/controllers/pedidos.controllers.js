@@ -9,6 +9,9 @@ export const crearPedido = async (req, res) => {
   try {
     const { productos, envio } = req.body;
     const usuarioId = req.usuarioId;
+    if (!usuarioId) {
+      return res.status(401).json({ mensaje: "Usuario no identificado" });
+    }
 
     if (!productos || productos.length === 0) {
       return res.status(400).json({ mensaje: "Pedido vacío" });
@@ -87,8 +90,10 @@ export const listarPedidos = async (req, res) => {
 
 export const obtenerPedidoID = async (req, res) => {
   try {
-    const pedido = await Pedido.findById(req.params.id)
-      .populate("usuario", "nombre apellido email");
+    const pedido = await Pedido.findById(req.params.id).populate(
+      "usuario",
+      "nombre apellido email",
+    );
 
     if (!pedido) {
       return res.status(404).json({ mensaje: "Pedido no encontrado" });
@@ -167,8 +172,6 @@ export const listarPedidosUsuario = async (req, res) => {
     res.status(200).json(pedidos);
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ mensaje: "Error al obtener historial de pedidos" });
+    res.status(500).json({ mensaje: "Error al obtener historial de pedidos" });
   }
 };

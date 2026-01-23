@@ -5,19 +5,20 @@ const verificarJWT = (req, res, next) => {
     const token = req.header("x-token");
 
     if (!token) {
-      return res.status(401).json({ mensaje: "No hay token" });
+      return res.status(401).json({ mensaje: "No hay token en la petición" });
     }
 
-    const payload = jwt.verify(token, process.env.SECRETJWT);
+    const payload = jwt.verify(token, process.env.SECRET_JWT);
 
-    // Inyectamos datos en la request
-    req.usuarioId = payload.uid;
-    req.rol = payload.rol;
-    req.usuario = payload;
+    // Guardamos los datos decodificados en la request para usarlos después
+    req.usuarioId = payload.uid; // ID para buscar en base de datos
+    req.rol = payload.rol;       // ROL para verificar permisos rapido
+    req.email = payload.email;
 
     next();
   } catch (error) {
-    return res.status(401).json({ mensaje: "Token inválido" });
+    console.error(error);
+    return res.status(401).json({ mensaje: "El token no es válido" });
   }
 };
 

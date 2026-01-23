@@ -1,20 +1,9 @@
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import Pedido from "../models/pedido.js";
 
-/* ======================================================
-   CONFIGURACIÓN MERCADO PAGO
-====================================================== */
-
 const client = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN,
 });
-
-/* ======================================================
-   CREAR PREFERENCIA DE MERCADO PAGO
-   - Recibe un pedidoId
-   - Usa los productos del pedido
-   - Guarda preferenceId en el pedido
-====================================================== */
 
 export const crearPreferencia = async (req, res) => {
   try {
@@ -29,18 +18,21 @@ export const crearPreferencia = async (req, res) => {
       return res.status(404).json({ mensaje: "Pedido no encontrado" });
     }
 
+    // Definimos la URL base según el entorno
+    const frontUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+
     const body = {
       items: pedido.productos.map((p) => ({
-        id: p.producto,
+        id: p.producto.toString(), // Convertimos ObjectId a String por seguridad
         title: p.nombre,
-        quantity: p.cantidad,
-        unit_price: p.precio,
+        quantity: Number(p.cantidad),
+        unit_price: Number(p.precio),
         currency_id: "ARS",
       })),
       back_urls: {
-        success: "http://localhost:5173/pago-exitoso",
-        failure: "http://localhost:5173/carrito",
-        pending: "http://localhost:5173/pago-pendiente",
+        success: `${frontUrl}/pago-exitoso`,
+        failure: `${frontUrl}/carrito`,
+        pending: `${frontUrl}/pago-pendiente`,
       },
       auto_return: "approved",
       metadata: {
@@ -51,15 +43,13 @@ export const crearPreferencia = async (req, res) => {
     const preference = new Preference(client);
     const result = await preference.create({ body });
 
-    // Guardamos el preferenceId dentro del pedido
+    // Guardamos la referencia
     pedido.pago.preferenceId = result.id;
     await pedido.save();
 
     res.status(200).json({ id: result.id });
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ mensaje: "Error al crear la preferencia de pago" });
+    res.status(500).json({ mensaje: "Error al crear la preferencia de pago" });
   }
 };
